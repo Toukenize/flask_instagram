@@ -1,0 +1,41 @@
+{% extends "layout.html" %}
+{% block content %}
+    {% for post in posts %}
+        <article class="media content-section">
+          <div class="media-body">
+            <div class="article-metadata">
+              <a class="mr-2" href="{{ url_for('user_posts', username=post.by) }}">{{ post.by }}</a>		
+              <small class="text-muted">{{ post['datetime'][:10] }}</small>
+            </div>
+            <h2><a class="article-title" href="#">{{ post.title }}</a></h2>
+            
+            {% if post.large_url[:4] == 'http' %}
+                <div class="article-content">
+                    <image src="{{ post.large_url }}" style="height: 100%; width: 100%;object-fit: contain">
+                </div>
+            {% else %}
+                <div class="article-content">
+                    <image src="{{ url_for('static', filename='images/' + post.large_url) }}" style="height: 100%; width: 100%;object-fit: contain">
+                </div>
+            {% endif %}
+            
+            
+            {% if post.like_by == None %}
+                <div class="article-content">
+                    <button type="button" class="btn btn-primary" onclick="window.location.href='{{ url_for('like', thumb_id = post.thumb_id) }}';">Like</button>
+                </div>
+            {% elif user_details.username not in post.like_by %}
+                <div class="article-content">
+                    <div class="text-muted">{{ post.like_count }} {{ 'like this' }}</div>
+                    <button type="button" class="btn btn-primary" onclick="window.location.href='{{ url_for('like', thumb_id = post.thumb_id) }}';">Like</button>
+                </div>
+            {% else %}
+                <div class="article-content">
+                    <div class="text-muted">{{ 'You and ' }} {{ post.like_count - 1}} {{ 'others like this' }}</div>
+                    <button type="button" class="btn btn-primary" onclick="window.location.href='{{ url_for('unlike', thumb_id = post.thumb_id) }}';">Unlike</button>
+                </div>
+            {% endif %}
+          </div>
+        </article>
+    {% endfor %}
+{% endblock content %}
