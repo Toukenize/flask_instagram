@@ -8,7 +8,11 @@
             <article class="media content-section">
                 <h4><a class="article-title" href="{{ url_for('search_user') }}">{{ user.username }}</a></h4>
                 <span style="margin-right:auto;"></span>
-                <button type="button" class="btn btn-primary" onclick="window.location.href='{{ url_for('search_user') }}';">Follow</button>
+                {% if user.followed %}
+                    <button type="button" class="btn btn-primary" style="width: 120px;background-color:white;border-color:red;color:red" onmouseover="style.fontWeight = 'bold'" onmouseleave="style.fontWeight = 'normal'" onclick="window.location.href='{{ url_for('unfollow_user', user=user.username) }}';">Unfollow</button>
+                {% else %}
+                    <button type="button" class="btn btn-primary" style="width: 120px" onmouseover="style.fontWeight = 'bold'" onmouseleave="style.fontWeight = 'normal'" onclick="window.location.href='{{ url_for('follow_user', user=user.username) }}';"> Follow </button>
+                {% endif %}
             </article>
         {% endfor %}
     </div>

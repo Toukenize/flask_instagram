@@ -6,7 +6,7 @@ import secrets
 import requests
 import os
 
-app = Flask(__name__)
+application = app = Flask(__name__)
 app.config['SECRET_KEY'] = '5791628bb0b13ce0c676dfde280ba245'
 user_details = dict()
 user_details['authenticated'] = False
@@ -143,8 +143,7 @@ def search_user():
 @app.route("/search_results/<string:query>", methods=['POST','GET'])
 def search_results(query):
     global user_details
-        
-    status = requests.get(f'http://la-nube.ap-southeast-1.elasticbeanstalk.com/loginuser/queryuser/{query}')
+    status = requests.get(f'http://la-nube.ap-southeast-1.elasticbeanstalk.com/loginuser/queryuser/{user_details["username"]}/{query}')
     if status.status_code != 200:
         flash('Something went wrong...','Danger')
     else:
@@ -152,6 +151,25 @@ def search_results(query):
 
     return render_template('search_results.html', title='Search Results', user_details=user_details, query_results=query_results, query=query)
 
+@app.route("/follow/<string:user>", methods=['POST','GET'])
+def follow_user(user):
+    global user_details
+    print(user_details)
+    status = requests.put(f'http://la-nube.ap-southeast-1.elasticbeanstalk.com/loginuser/follow/{user}', json={'username':user_details["username"]})
+    if status.status_code != 200:
+        flash('Something went wrong...','Danger')
+    else:
+        return redirect(request.referrer)      
+
+@app.route("/unfollow/<string:user>", methods=['POST','GET'])
+def unfollow_user(user):
+    global user_details
+    print(user_details)
+    status = requests.put(f'http://la-nube.ap-southeast-1.elasticbeanstalk.com/loginuser/unfollow/{user}', json={'username':user_details["username"]})
+    if status.status_code != 200:
+        flash('Something went wrong...','Danger')
+    else:
+        return redirect(request.referrer) 
     
 @app.route("/logout", methods=['POST','GET'])
 def logout():
