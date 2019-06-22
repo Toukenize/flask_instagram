@@ -2,11 +2,11 @@
 UI for Photo-hosting Social Media build using Flask
 
 # How to Run
-- Step 1 : Create new environment using Anaconda
+- Step 1 : Clone the repository & create a new environment using Anaconda
 
   `conda create --name your_env_name python=3.6.6`
   
-- Step 2 : Activate your environment. 
+- Step 2 : Go to the base directory of the cloned repository and activate your environment.
 
   On Windows - `activate your_env_name`
   
