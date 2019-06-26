@@ -9,23 +9,20 @@ import os
 application = app = Flask(__name__)
 app.config['SECRET_KEY'] = '5791628bb0b13ce0c676dfde280ba245'
 user_details = dict()
-user_details['authenticated'] = False
 
 @app.route("/register", methods=['GET', 'POST'])
 def register():
     global user_details
     
-    if user_details['authenticated']:
-        return redirect(url_for('home'))
     form = RegistrationForm()
     if form.validate_on_submit():
         
         signup_details = dict()
-        signup_details['usernamesignup'] = form.username.data
-        signup_details['passwordsignup'] = form.password.data
-        signup_details['emailsignup'] = form.email.data
+        signup_details['username'] = form.username.data
+        signup_details['password'] = form.password.data
+        #signup_details['emailsignup'] = form.email.data
         
-        status = requests.post('http://la-entrada.ap-southeast-1.elasticbeanstalk.com/user/create', json=signup_details)
+        status = requests.post('https://mnu7f7vb6l.execute-api.ap-southeast-1.amazonaws.com/ISS/user/create', json=signup_details)
         
         if status.status_code != 200:
             flash('Something went wrong, please creating your account again', 'danger')
@@ -38,16 +35,22 @@ def register():
 @app.route("/home")
 def home():
     global user_details
-    if not user_details['authenticated']:
+        
+    if (user_details.get('authenticated') != True) or (user_details.get('token') == None) or (user_details.get('username') == None):
         return redirect(url_for('login'))
         
-    status = requests.get(f'http://la-nube.ap-southeast-1.elasticbeanstalk.com/loginuser/{user_details["username"]}')
+    status = requests.get(f'https://mnu7f7vb6l.execute-api.ap-southeast-1.amazonaws.com/ISS/loginuser/{user_details["username"]}',
+    headers={'content-type':'application/json','authorization':user_details['token']})
     if status.status_code != 200:
         flash('Something went wrong...','Danger')
     else:
-        posts = status.json()
-        
-    posts = sorted(posts, key=lambda x : x['datetime'], reverse=True)
+        try:
+            print(status.json())
+            posts = status.json()
+            posts = sorted(posts, key=lambda x : x['datetime'], reverse=True)
+        except:
+            flash('Something went wrong...','Danger')
+            
     
     return render_template('home.html', posts=posts, user_details=user_details)
 
@@ -55,28 +58,26 @@ def home():
 @app.route("/login", methods=['GET', 'POST'])
 def login():
     global user_details
-    if user_details['authenticated']:
+    if (user_details.get('authenticated') == True) & (user_details.get('token') != None):
         return redirect(url_for('home'))
     form = LoginForm()
     if form.validate_on_submit():
         
         login_details = dict()
         
-        login_details['usernamesignup'] = form.username.data
-        login_details['passwordsignup'] = form.password.data
+        login_details['username'] = form.username.data
+        login_details['password'] = form.password.data
         
-        status = requests.post('http://la-entrada.ap-southeast-1.elasticbeanstalk.com/user/signin', json=login_details)
+        status = requests.post('https://mnu7f7vb6l.execute-api.ap-southeast-1.amazonaws.com/ISS/user/signin', json=login_details)
         
-        if status.status_code != 200:
+        if status.status_code != 200 or (status.json()['status'] == 'fail'):
             flash('Login Unsuccessful. Please check email and password', 'danger')
             
         else:
-            
-            for k, v in status.json().items():
-                user_details[k] = v
-            
             user_details['authenticated'] = True
-            
+            user_details['token'] = status.json()['id_token']
+            user_details['username'] = login_details['username']
+                        
             return redirect(url_for('home'))
     return render_template('login.html', title='Login', form=form, user_details=user_details)
 
@@ -105,10 +106,11 @@ def new_post():
         picture_details['username'] = user_details['username']
         picture_details['title'] = form.title.data
         picture_details['large_url'] = picture_file
+        picture_details['small_url'] = picture_file
         
-        status = requests.post('http://la-nube.ap-southeast-1.elasticbeanstalk.com/picture', json=picture_details)
+        status = requests.post('https://mnu7f7vb6l.execute-api.ap-southeast-1.amazonaws.com/ISS/picture', json=picture_details)
         
-        if status.status_code != 200:
+        if status.status_code != 200 or (status.json().get('statusCode') != None):
             flash('Something went wrong, please try again', 'danger')
         else:
             flash('Your picture has been posted!', 'success')
@@ -119,14 +121,17 @@ def new_post():
 @app.route("/account", methods=['POST','GET'])
 def account():
     global user_details
-    status = requests.get(f'http://la-nube.ap-southeast-1.elasticbeanstalk.com/loginuser/{user_details["username"]}')
+    status = requests.get(f'https://mnu7f7vb6l.execute-api.ap-southeast-1.amazonaws.com/ISS/loginuser/queryuserpictureby/{user_details["username"]}', headers={'content-type':'application/json','authorization':user_details['token']})
     if status.status_code != 200:
         flash('Something went wrong...','Danger')
     else:
-        posts = status.json()
-        
-    posts = [x for x in posts if x['by'] == user_details['username']]
-    posts = sorted(posts, key=lambda x : x['datetime'], reverse=True)
+        try:
+            posts = status.json()
+            if len(posts) > 0:
+                posts = [x for x in posts if x['by'] == user_details['username']]
+                posts = sorted(posts, key=lambda x : x['datetime'], reverse=True)
+        except:
+            posts = []
  
     return render_template('account.html', title='My Account', posts=posts, user_details=user_details)
 
@@ -143,8 +148,8 @@ def search_user():
 @app.route("/search_results/<string:query>", methods=['POST','GET'])
 def search_results(query):
     global user_details
-    status = requests.get(f'http://la-nube.ap-southeast-1.elasticbeanstalk.com/loginuser/queryuser/{user_details["username"]}/{query}')
-    if status.status_code != 200:
+    status = requests.get(f'https://mnu7f7vb6l.execute-api.ap-southeast-1.amazonaws.com/ISS/loginuser/queryuser/{user_details["username"]}/{query}', headers={'content-type':'application/json','authorization':user_details['token']})
+    if status.status_code != 200 or (type(status.json()) != list):
         flash('Something went wrong...','Danger')
     else:
         query_results = status.json()      
@@ -155,7 +160,7 @@ def search_results(query):
 def follow_user(user):
     global user_details
     print(user_details)
-    status = requests.put(f'http://la-nube.ap-southeast-1.elasticbeanstalk.com/loginuser/follow/{user}', json={'username':user_details["username"]})
+    status = requests.put(f'https://mnu7f7vb6l.execute-api.ap-southeast-1.amazonaws.com/ISS/loginuser/follow/{user}', json={'username':user_details["username"]}, headers={'content-type':'application/json','authorization':user_details['token']})
     if status.status_code != 200:
         flash('Something went wrong...','Danger')
     else:
@@ -165,7 +170,7 @@ def follow_user(user):
 def unfollow_user(user):
     global user_details
     print(user_details)
-    status = requests.put(f'http://la-nube.ap-southeast-1.elasticbeanstalk.com/loginuser/unfollow/{user}', json={'username':user_details["username"]})
+    status = requests.put(f'https://mnu7f7vb6l.execute-api.ap-southeast-1.amazonaws.com/ISS/loginuser/unfollow/{user}', json={'username':user_details["username"]}, headers={'content-type':'application/json','authorization':user_details['token']})
     if status.status_code != 200:
         flash('Something went wrong...','Danger')
     else:
@@ -174,18 +179,36 @@ def unfollow_user(user):
 @app.route("/logout", methods=['POST','GET'])
 def logout():
     global user_details
-    return render_template('logout.html', title='Logout', user_details=user_details)
+    
+    user_details = dict()
+    
+    flash('You have successfully logged out.','success')
+    
+    return redirect(url_for('login'))
 
 @app.route("/user/<string:username>", methods=['POST','GET'])
 def user_posts(username):
     global user_details
-    return render_template('user_posts.html', title=f"{username}'s Posts", user_details=user_details)
+    
+    status = requests.get(f'https://mnu7f7vb6l.execute-api.ap-southeast-1.amazonaws.com/ISS/loginuser/queryuserpictureby/{username}', headers={'content-type':'application/json','authorization':user_details['token']})
+    if status.status_code != 200:
+        flash('Something went wrong...','Danger')
+    else:
+        try:
+            posts = status.json()
+            if len(posts) > 0:
+                posts = [x for x in posts]
+                posts = sorted(posts, key=lambda x : x['datetime'], reverse=True)
+        except:
+            posts = []
+    
+    return render_template('user_account.html', title=f"{username}'s Posts", user_details=user_details, posts=posts)
 
 @app.route("/like/<string:thumb_id>", methods=['POST','GET'])
 def like(thumb_id):
     global user_details
     put_details = {'username':user_details['username']}
-    status = requests.put(f'http://la-nube.ap-southeast-1.elasticbeanstalk.com/picture/like/{thumb_id}', json=put_details)
+    status = requests.put(f'https://mnu7f7vb6l.execute-api.ap-southeast-1.amazonaws.com/ISS/picture/like/{thumb_id}', json=put_details, headers={'content-type':'application/json','authorization':user_details['token']})
     print(status.status_code, thumb_id)
     return redirect(request.referrer)
 
@@ -193,7 +216,7 @@ def like(thumb_id):
 def unlike(thumb_id):
     global user_details
     put_details = {'username':user_details['username']}
-    status = requests.put(f'http://la-nube.ap-southeast-1.elasticbeanstalk.com/picture/unlike/{thumb_id}', json=put_details)
+    status = requests.put(f'https://mnu7f7vb6l.execute-api.ap-southeast-1.amazonaws.com/ISS/picture/unlike/{thumb_id}', json=put_details, headers={'content-type':'application/json','authorization':user_details['token']})
     return redirect(request.referrer)
 
 if __name__ == '__main__':
