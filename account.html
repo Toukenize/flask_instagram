@@ -1,0 +1,34 @@
+{% extends "layout.html" %}
+{% block content %}
+    <div class="content-section">
+        <div class="media">
+            <legend class="border-bottom mb-4">Your Account</legend>          
+        </div>
+        {% for post in posts %}
+        <div class="media-body">
+            <div class="article-metadata">
+              <small class="text-muted">{{ post['datetime'][:10] }}</small>
+            </div>
+        <h2><a class="article-title" href="#">{{ post.title }}</a></h2>
+
+        {% if post.small_url != None %}
+                
+            {% if post.small_url[:4] == 'http' %}
+                <div class="article-content">
+                    <a href="{{ url_for('picture', title=post.title, url_id=post.small_url.split('/')[-1]) }}"><image src="{{ post.small_url }}" style="height: 100%; width: 100%;object-fit: contain"></a>
+                </div>
+            {% else %}
+                <div class="article-content">
+                    <image src="{{ url_for('static', filename='image-not-found.jpg') }}" style="height: 100%; width: 100%;object-fit: contain">
+                </div>
+            {% endif %}
+        {% else %}
+            <div class="article-content">
+                <image src="{{ url_for('static', filename='image-not-found.jpg') }}" style="height: 100%; width: 100%;object-fit: contain">
+            </div>
+        {% endif %}
+
+        </div>
+        {% endfor %}
+    </div>
+{% endblock content %}
