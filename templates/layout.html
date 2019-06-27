@@ -31,7 +31,7 @@
             <!-- Navbar Right Side -->
             <div class="navbar-nav">
 
-              {% if user_details['authenticated'] %}
+              {% if session['authenticated'] %}
                 <a class="nav-item nav-link" href="{{ url_for('search_user') }}">Find User</a>
                 <a class="nav-item nav-link" href="{{ url_for('new_post') }}">New Post</a>
                 <a class="nav-item nav-link" href="{{ url_for('account') }}">Account</a>
