@@ -15,7 +15,7 @@
                 
             {% if post.small_url[:4] == 'http' %}
                 <div class="article-content">
-                    <a href="{{ post.large_url }}"><image src="{{ post.small_url }}" style="height: 100%; width: 100%;object-fit: contain"></a>
+                    <a href="{{ url_for('picture', title=post.title, url_id=post.small_url.split('/')[-1]) }}"><image src="{{ post.small_url }}" style="height: 100%; width: 100%;object-fit: contain"></a>
                 </div>
             {% else %}
                 <div class="article-content">
