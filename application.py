@@ -95,7 +95,7 @@ def new_post():
             flash('Something went wrong, please try again', 'danger')
         else:
             flash('Your picture has been posted!', 'success')
-            time.sleep(2)
+            time.sleep(3)
             return redirect(url_for('home'))
     return render_template('create_post.html', title='New Post',
                            form=form, legend='New Post')
