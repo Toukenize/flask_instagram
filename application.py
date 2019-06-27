@@ -3,6 +3,7 @@ from forms import RegistrationForm, LoginForm, PostForm, SearchForm
 
 import requests
 import base64
+import time
 
 application = app = Flask(__name__)
 app.config['SECRET_KEY'] = 'some_super_random_key_that_youu_willl_neverr_guesss_correctlyy'
@@ -94,6 +95,7 @@ def new_post():
             flash('Something went wrong, please try again', 'danger')
         else:
             flash('Your picture has been posted!', 'success')
+            time.sleep(2)
             return redirect(url_for('home'))
     return render_template('create_post.html', title='New Post',
                            form=form, legend='New Post')
@@ -217,5 +219,20 @@ def unlike(thumb_id):
     status = requests.put(f'https://mnu7f7vb6l.execute-api.ap-southeast-1.amazonaws.com/ISS/picture/unlike/{thumb_id}', json=put_details, headers={'content-type':'application/json','authorization':session['token']})
     return redirect(request.referrer)
 
+@app.route("/picture/<string:title>/<string:url_id>", methods=['POST','GET'])
+def picture(title, url_id):
+    
+    if 'username' not in session:
+        return redirect(url_for('login'))
+    
+    image_url_id = url_id.split('resized-')[-1]
+    
+    high_res_url = 'https://5239original.s3-ap-southeast-1.amazonaws.com/image/' + image_url_id
+    
+    print(high_res_url)
+    
+    return render_template('image.html', title=title, high_res_url=high_res_url)
+
+    
 if __name__ == '__main__':
     app.run(debug=True)
