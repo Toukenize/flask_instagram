@@ -1,13 +1,11 @@
 from flask import Flask, render_template, url_for, flash, redirect, request, abort, session
-from forms import RegistrationForm, LoginForm, FollowForm, UpdateAccountForm, PostForm, SearchForm
-from PIL import Image
+from forms import RegistrationForm, LoginForm, PostForm, SearchForm
 
-import secrets
 import requests
-import os
+import base64
 
 application = app = Flask(__name__)
-app.config['SECRET_KEY'] = os.urandom(50)
+app.config['SECRET_KEY'] = 'some_super_random_key_that_youu_willl_neverr_guesss_correctlyy'
 
 @app.route("/register", methods=['GET', 'POST'])
 def register():
@@ -42,12 +40,10 @@ def home():
         flash('Something went wrong...','Danger')
     else:
         try:
-            print(status.json())
             posts = status.json()
             posts = sorted(posts, key=lambda x : x['datetime'], reverse=True)
         except:
             flash('Something went wrong...','Danger')
-            
     
     return render_template('home.html', posts=posts)
 
@@ -76,36 +72,25 @@ def login():
                         
             return redirect(url_for('home'))
     return render_template('login.html', title='Login', form=form)
-
-def post_picture(form_picture): 
-    random_hex = secrets.token_hex(8)
-    _, f_ext = os.path.splitext(form_picture.filename)
-    picture_fn = random_hex + f_ext
-    picture_path = os.path.join(app.root_path, 'static/images', picture_fn)
-
-    #output_size = (125, 125)
-    i = Image.open(form_picture)
-    #i.thumbnail(output_size)
-    i.save(picture_path)
-
-    return picture_fn
-
     
 @app.route("/new_post", methods=['POST','GET'])
 def new_post():
+    
+    if 'username' not in session:
+        return redirect(url_for('login'))
+    
     form = PostForm()
     if form.validate_on_submit():
-        picture_file = post_picture(form.content.data)
         
+        encoded_string = base64.b64encode(form.content.data.read())
         picture_details = dict()
         picture_details['username'] = session['username']
         picture_details['title'] = form.title.data
-        picture_details['large_url'] = picture_file
-        picture_details['small_url'] = picture_file
+        picture_details['image_base64'] = encoded_string.decode()
         
-        status = requests.post('https://mnu7f7vb6l.execute-api.ap-southeast-1.amazonaws.com/ISS/picture', json=picture_details)
+        status = requests.post('https://mnu7f7vb6l.execute-api.ap-southeast-1.amazonaws.com/ISS/postpicture', json=picture_details, headers={'content-type':'application/json','authorization':session['token']})
         
-        if status.status_code != 200 or (status.json().get('statusCode') != None):
+        if status.status_code != 200 or (status.json().get('statusCode') != 200) or (status.json().get('message') == 'Unauthorized'):
             flash('Something went wrong, please try again', 'danger')
         else:
             flash('Your picture has been posted!', 'success')
@@ -115,6 +100,9 @@ def new_post():
 
 @app.route("/account", methods=['POST','GET'])
 def account():
+    if 'username' not in session:
+        return redirect(url_for('login'))
+
     status = requests.get(f'https://mnu7f7vb6l.execute-api.ap-southeast-1.amazonaws.com/ISS/loginuser/queryuserpictureby/{session["username"]}', headers={'content-type':'application/json','authorization':session['token']})
     if status.status_code != 200:
         flash('Something went wrong...','Danger')
@@ -131,6 +119,10 @@ def account():
 
 @app.route("/search_user", methods=['POST','GET'])
 def search_user():
+    
+    if 'username' not in session:
+        return redirect(url_for('login'))
+    
     form = SearchForm()
     if form.validate_on_submit():
         query = form.username.data
@@ -140,6 +132,10 @@ def search_user():
 
 @app.route("/search_results/<string:query>", methods=['POST','GET'])
 def search_results(query):
+
+    if 'username' not in session:
+        return redirect(url_for('login'))
+    
     status = requests.get(f'https://mnu7f7vb6l.execute-api.ap-southeast-1.amazonaws.com/ISS/loginuser/queryuser/{session["username"]}/{query}', headers={'content-type':'application/json','authorization':session['token']})
     if status.status_code != 200 or (type(status.json()) != list):
         flash('Something went wrong...','Danger')
@@ -150,6 +146,10 @@ def search_results(query):
 
 @app.route("/follow/<string:user>", methods=['POST','GET'])
 def follow_user(user):
+
+    if 'username' not in session:
+        return redirect(url_for('login'))
+    
     status = requests.put(f'https://mnu7f7vb6l.execute-api.ap-southeast-1.amazonaws.com/ISS/loginuser/follow/{user}', json={'username':session["username"]}, headers={'content-type':'application/json','authorization':session['token']})
     if status.status_code != 200:
         flash('Something went wrong...','Danger')
@@ -158,6 +158,10 @@ def follow_user(user):
 
 @app.route("/unfollow/<string:user>", methods=['POST','GET'])
 def unfollow_user(user):
+
+    if 'username' not in session:
+        return redirect(url_for('login'))
+    
     status = requests.put(f'https://mnu7f7vb6l.execute-api.ap-southeast-1.amazonaws.com/ISS/loginuser/unfollow/{user}', json={'username':session["username"]}, headers={'content-type':'application/json','authorization':session['token']})
     if status.status_code != 200:
         flash('Something went wrong...','Danger')
@@ -176,6 +180,9 @@ def logout():
 @app.route("/user/<string:username>", methods=['POST','GET'])
 def user_posts(username):
     
+    if 'username' not in session:
+        return redirect(url_for('login'))
+    
     status = requests.get(f'https://mnu7f7vb6l.execute-api.ap-southeast-1.amazonaws.com/ISS/loginuser/queryuserpictureby/{username}', headers={'content-type':'application/json','authorization':session['token']})
     if status.status_code != 200:
         flash('Something went wrong...','Danger')
@@ -192,12 +199,20 @@ def user_posts(username):
 
 @app.route("/like/<string:thumb_id>", methods=['POST','GET'])
 def like(thumb_id):
+    
+    if 'username' not in session:
+        return redirect(url_for('login'))
+
     put_details = {'username':session['username']}
     status = requests.put(f'https://mnu7f7vb6l.execute-api.ap-southeast-1.amazonaws.com/ISS/picture/like/{thumb_id}', json=put_details, headers={'content-type':'application/json','authorization':session['token']})
     return redirect(request.referrer)
 
 @app.route("/unlike/<string:thumb_id>", methods=['POST','GET'])
 def unlike(thumb_id):
+    
+    if 'username' not in session:
+        return redirect(url_for('login'))
+    
     put_details = {'username':session['username']}
     status = requests.put(f'https://mnu7f7vb6l.execute-api.ap-southeast-1.amazonaws.com/ISS/picture/unlike/{thumb_id}', json=put_details, headers={'content-type':'application/json','authorization':session['token']})
     return redirect(request.referrer)

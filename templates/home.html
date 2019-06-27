@@ -9,13 +9,20 @@
             </div>
             <h2><a class="article-title" href="#">{{ post.title }}</a></h2>
             
-            {% if post.large_url[:4] == 'http' %}
-                <div class="article-content">
-                    <image src="{{ post.large_url }}" style="height: 100%; width: 100%;object-fit: contain">
-                </div>
+            {% if post.small_url != None %}
+                
+                {% if post.small_url[:4] == 'http' %}
+                    <div class="article-content">
+                        <a href="{{ post.large_url }}"><image src="{{ post.small_url }}" style="height: 100%; width: 100%;object-fit: contain"></a>
+                    </div>
+                {% else %}
+                    <div class="article-content">
+                        <image src="{{ url_for('static', filename='image-not-found.jpg') }}" style="height: 100%; width: 100%;object-fit: contain">
+                    </div>
+                {% endif %}
             {% else %}
                 <div class="article-content">
-                    <image src="{{ url_for('static', filename='images/' + post.large_url) }}" style="height: 100%; width: 100%;object-fit: contain">
+                    <image src="{{ url_for('static', filename='image-not-found.jpg') }}" style="height: 100%; width: 100%;object-fit: contain">
                 </div>
             {% endif %}
             
