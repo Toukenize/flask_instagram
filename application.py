@@ -1,9 +1,13 @@
 from flask import Flask, render_template, url_for, flash, redirect, request, abort, session
 from forms import RegistrationForm, LoginForm, PostForm, SearchForm
+from PIL import Image
 
 import requests
 import base64
 import time
+import io
+import secrets
+import os
 
 application = app = Flask(__name__)
 app.config['SECRET_KEY'] = 'some_super_random_key_that_youu_willl_neverr_guesss_correctlyy'
@@ -17,7 +21,6 @@ def register():
         signup_details = dict()
         signup_details['username'] = form.username.data
         signup_details['password'] = form.password.data
-        #signup_details['emailsignup'] = form.email.data
         
         status = requests.post('https://mnu7f7vb6l.execute-api.ap-southeast-1.amazonaws.com/ISS/user/create', json=signup_details)
         
@@ -74,6 +77,22 @@ def login():
             return redirect(url_for('home'))
     return render_template('login.html', title='Login', form=form)
     
+def resize_encode_img(image_data):
+    
+    output_size = (800,800)
+    temp_file_name = secrets.token_hex(8) + '.jpg'
+    
+    image = Image.open(image_data)
+    image.thumbnail(output_size)
+    image.save(temp_file_name)
+
+    with open(temp_file_name,'rb') as image_handle:
+        encoded_string = base64.b64encode(image_handle.read())
+        
+    os.remove(temp_file_name)
+    
+    return encoded_string
+    
 @app.route("/new_post", methods=['POST','GET'])
 def new_post():
     
@@ -82,8 +101,8 @@ def new_post():
     
     form = PostForm()
     if form.validate_on_submit():
-        
-        encoded_string = base64.b64encode(form.content.data.read())
+                
+        encoded_string = resize_encode_img(form.content.data)
         picture_details = dict()
         picture_details['username'] = session['username']
         picture_details['title'] = form.title.data
