@@ -10,7 +10,7 @@ itsdangerous==1.1.0
 Jinja2==2.11.3
 MarkupSafe==1.1.1
 networkx==2.3
-Pillow==8.1.1
+Pillow==8.2.0
 requests==2.22.0
 test-generator==0.1.1
 urllib3==1.25.3
